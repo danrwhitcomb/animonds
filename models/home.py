@@ -1,5 +1,5 @@
 class Home:
 
-    def __init__(self, id):
+    def __init__(self, id, loc):
         self.id = id
-        self.loc = (0,0)
+        self.loc = loc

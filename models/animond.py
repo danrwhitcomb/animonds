@@ -10,23 +10,30 @@ ROTATE_DIST = pi / 8.0
 
 class Animond:
 
-    def __init__(self, id, loc):
+    def __init__(self, id, loc, max_dim, has_food=False):
         self.id = id
         self.loc = loc
+        self.max_dim = max_dim
         self.angle = 0
         self.lock = False
+        self.has_food = False
 
-    def isLocked(self):
+    def is_locked(self):
         return self.lock
 
-    def getRandomMove(self):
-        return MOVES[randint(0, len(MOVES)-1)]
+    def set_state(self, location, angle, has_food):
+        self.loc = location
+        self.angle = angle
+        self.has_food = has_food
 
-    def applyMove(self, move):
+    def apply_move(self, move):
         self.lock = True
 
         if move == FORWARD:
-            self.loc = geometry.getPointInDirection(self.loc, self.angle, MOVE_DIST)
+            new_location = geometry.getPointInDirection(self.loc, self.angle, MOVE_DIST)
+            self.loc = (min(new_location[0], self.max_dim[0]), min(new_location[1], self.max_dim[1]))
+            self.loc = (max(0, self.loc[0]), max(0, self.loc[1]))
+
         elif move == LEFT_ROTATE:
             self.angle += ROTATE_DIST
         elif move == RIGHT_ROTATE:
