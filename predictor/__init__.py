@@ -1,2 +1,3 @@
-from RandomPredictor import RandomPredictor
-from QPredictor import QPredictor
+from predictor.predictor import Predictor
+from predictor.random_predictor import RandomPredictor
+from predictor.qpredictor import QPredictor

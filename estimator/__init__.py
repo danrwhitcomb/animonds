@@ -1,1 +1,1 @@
-from deep import deep_estimator, recurrent_estimator
+from estimator.deep import deep_q_estimator

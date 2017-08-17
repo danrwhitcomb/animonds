@@ -1,15 +1,21 @@
 import numpy as np
 from random import choice, random
+
+from predictor import Predictor
 from util.moves import MOVES
-from estimator import deep_estimator, recurrent_estimator
+from estimator import deep_q_estimator
 
-from keras import backend as K
 
-LEARNING_RATE = 0.001
+import tensorflow as tf
+
+LEARNING_RATE = 0.000005
 PERCENT_RANDOM = 0.1
 BATCH_SIZE = 32
-DISCOUNT = 1.0
-MAX_D_SIZE = 10000
+DISCOUNT = 0.99
+MAX_D_SIZE = 1000
+RELU_E = 0.001
+DROPOUT = 0.5
+MOMENTUM = 0.5
 
 MIN = -999999
 
@@ -18,27 +24,59 @@ ACTION = 'action'
 REWARD = 'reward'
 T2 = 't2'
 
-class QPredictor:
+MODEL_FILE = 'animond.model'
 
-    def __init__(self, time_steps, state_size, replay_size):
-        # self.estimator = deep_estimator((state_size * replay_size), (len(MOVES)), LEARNING_RATE)
-        self.estimator = recurrent_estimator((replay_size, state_size), (len(MOVES)), LEARNING_RATE)
+
+class QPredictor(Predictor):
+
+    def __init__(self,
+                 epoch_size,
+                 replay_size,
+                 random_percent=PERCENT_RANDOM,
+                 learning_rate=LEARNING_RATE,
+                 discount=DISCOUNT,
+                 momentum=MOMENTUM,
+                 dropout=DROPOUT):
+        self.discount = discount
+        self.random_percent = random_percent
+        self.learning_rate = learning_rate
+        self.dropout = dropout
+        self.momentum = momentum
 
         self.count = 1
+        self.episode = 1
 
-        #The number of time steps there will be per episode
-        self.T = time_steps
+        # The number of time steps there will be per episode
+        self.T = epoch_size
 
-        #The number of states to include in the network input
+        # The number of states to include in the network input
         self.replay_size = replay_size
 
-        # The data size to represent a single state
-        self.state_size = state_size
-
-        #The replay memory store
+        # The replay memory store
         self.D = []
 
         self.exploration_chance = 1.0
+
+    def initialize(self, initial_state):
+        self.state_size = len(initial_state)
+        self.reset(initial_state)
+
+        output_count = len(MOVES)
+
+        self.X = tf.placeholder(tf.float32, shape=(None, self.state_size * self.replay_size), name='state_inputs')
+        self.y = tf.placeholder(tf.float32, shape=(None, output_count), name='labels')
+        self.move_masks = tf.placeholder(tf.float32, shape=(None, output_count), name='move_masks')
+
+        self.graph_output, self.train, self.summaries = deep_q_estimator(self.X, self.y,
+                                                                         self.move_masks,
+                                                                         output_count,
+                                                                         self.learning_rate,
+                                                                         self.dropout, self.momentum)
+
+        self.session = tf.InteractiveSession()
+        tf.global_variables_initializer().run()
+
+        self.summary_writer = tf.summary.FileWriter('summary', self.session.graph)
 
     '''
     Resets the memory contents to a default state
@@ -46,6 +84,7 @@ class QPredictor:
     '''
     def reset(self, initial_state):
         self.count = 1
+        self.episode += 1
         self.s = {self.count: initial_state}
         self.phi = {self.count: self._get_state_series(self.count)}
 
@@ -59,7 +98,8 @@ class QPredictor:
             move = choice(MOVES)
         else:
             state_series = [self._get_state_series(self.count)]
-            q_vals = self.estimator.predict(np.array(state_series))[0]
+            q_vals = self.session.run(self.graph_output,
+                                      feed_dict={self.X: np.array(state_series)})[0]
             move = MOVES[np.argmax(q_vals)]
 
         return move
@@ -74,17 +114,17 @@ class QPredictor:
     def update(self, action, reward, start, end):
         ind = self.count
 
-        #Save the new state
+        # Save the new state
         self.s[ind + 1] = end
 
-        #Preprocess the new state to a standard sized data
+        # Preprocess the new state to a standard sized data
         self.phi[ind + 1] = self._get_state_series(ind + 1)
 
-        #Save the transition
-        self.D.append({ T1: self.phi[ind],
-                        ACTION: action,
-                        REWARD: reward,
-                        T2: self.phi[ind + 1] })
+        # Save the transition
+        self.D.append({T1: self.phi[ind],
+                       ACTION: action,
+                       REWARD: reward,
+                       T2: self.phi[ind + 1]})
 
         if len(self.D) > MAX_D_SIZE:
             self.D.pop(0)
@@ -92,8 +132,8 @@ class QPredictor:
         self._train()
         self.count += 1
 
-        if self.exploration_chance > PERCENT_RANDOM:
-            self.exploration_chance -= 0.001
+        if self.exploration_chance > self.random_percent:
+            self.exploration_chance -= 0.00001
 
     '''
     Train the predictor for a single timestep
@@ -104,9 +144,13 @@ class QPredictor:
 
         # We use the estimator to select the what would
         # have been the best move and calculate the reward
-        memory = self._build_optimal_labels(batch)
+        memory, move_masks = self._build_optimal_labels(batch)
         input_states = np.array([d[T1] for d in batch])
-        self.estimator.fit(input_states, memory, batch_size=BATCH_SIZE, epochs=1, verbose=0)
+        summary, _ = self.session.run([self.summaries, self.train], feed_dict={self.X: input_states,
+                                                                               self.y: memory,
+                                                                               self.move_masks: move_masks})
+
+        self.summary_writer.add_summary(summary, self.episode * self.T + self.count)
 
     '''
     Given a batch of transitions,
@@ -114,18 +158,28 @@ class QPredictor:
     '''
     def _build_optimal_labels(self, batch):
         memory = []
+        move_masks = []
 
         for d in batch:
-            indOfAction = MOVES.index(d[ACTION])
 
-            target = d[REWARD] + DISCOUNT * self.estimator.predict(np.array([d[T2]]))[0]
-            target_future = self.estimator.predict(np.array([d[T1]]))[0]
+            # Get the future output
+            target = self.session.run(self.graph_output, feed_dict={self.X: np.array([d[T2]])})[0]
+            ind_best_action = np.argmax(target)
+            ind_recorded_action = MOVES.index(d[ACTION])
 
-            target_future[indOfAction] = target[indOfAction]
+            target_q_value = d[REWARD] + (self.discount * target[ind_best_action])
+            label = np.zeros(len(MOVES))
+            label[ind_recorded_action] = target_q_value
+            # Generate the move mask that will be used
+            # to hide loss differences from other actions
+            # during training
+            move_mask = np.zeros((len(MOVES)))
+            move_mask[ind_recorded_action] = 1
 
-            memory.append(target_future)
+            move_masks.append(move_mask)
+            memory.append(target)
 
-        return np.array(memory)
+        return np.array(memory), np.array(move_masks)
 
     '''
     Select 'n' random samples from D
@@ -154,11 +208,11 @@ class QPredictor:
     from `start_index` to 0 or `start_index - replay_size` whichever
     comes first. Any unfilled values are set to -inf
     '''
-    def _get_state_series(self, start_index, is_flat=False):
+    def _get_state_series(self, start_index, is_flat=True):
         end_index = start_index - self.replay_size if \
                     start_index - self.replay_size > 0 else 0
 
-        #Flatten all the previous states to a single list
+        # Flatten all the previous states to a single list
         states = [self.s[i] for i in range(start_index, end_index, -1)]
         history = None
         if is_flat:
@@ -172,6 +226,23 @@ class QPredictor:
             history[i] = states[i]
 
         return history
+
+    def get_callbacks(self):
+        return [self.monitor]
+
+    def save(self):
+        saver = tf.train.Saver()
+        saver.save(self.session, MODEL_FILE)
+        print("Model saved.")
+
+    def load(self, file_path):
+        saver = tf.train.Saver()
+        saver.restore(self.session, file_path)
+        print("Model restored.")
+
+    def close(self):
+        self.summary_writer.close()
+
 
 def is_transition_in_list(transition, list):
     def equal(t1, t2):
