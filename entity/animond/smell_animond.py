@@ -14,7 +14,7 @@ class SmellAnimond(Animond):
                  view,
                  position=(0, 0),
                  angle=0,
-                 has_food=False) -> None:
+                 has_food=False):
         super().__init__(entity_id, predictor, view, position, angle, has_food)
 
     @property
@@ -22,7 +22,7 @@ class SmellAnimond(Animond):
         world_size = self.world.size
         normalized_position = geometry.normalize_position(self.position, world_size)
         normalized_angle = geometry.normalize_angle(self.angle)
-        state: Tuple = (normalized_position[0], normalized_position[1], normalized_angle)
+        state = (normalized_position[0], normalized_position[1], normalized_angle)
 
         if (self.world is not None and isinstance(self.world, AnimondWorld)):
             distance_from_goal = self.world.get_avg_distance_from_home(self.position) \

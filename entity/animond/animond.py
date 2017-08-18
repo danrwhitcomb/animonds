@@ -51,7 +51,7 @@ class Animond(Entity):
         return sum([self.tick(train) for _ in range(steps)]) / steps
 
     def tick(self, train=False):
-        had_food: bool = self.has_food
+        had_food = self.has_food
         move = self.predictor.get_move()
 
         # Get the original move
@@ -65,7 +65,7 @@ class Animond(Entity):
 
         # If the update caused a food exchange, the move gets
         # additional reward
-        food_score: int = 1 if had_food ^ self.has_food else 0
+        food_score = 1 if had_food ^ self.has_food else 0
         reward = self.world.get_reward(self) + food_score
 
         # Update the predictor with the new transition

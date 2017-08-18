@@ -20,7 +20,7 @@ class AnimondView:
         self.angle = angle
         self.length = length
 
-    def render(self, position, current_angle, has_food) -> None:
+    def render(self, position, current_angle, has_food):
         angle1 = current_angle + self.angle
         angle2 = current_angle - self.angle
 

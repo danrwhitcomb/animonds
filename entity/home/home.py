@@ -6,7 +6,7 @@ class Home(Entity):
     def __init__(self,
                  entity_id,
                  position,
-                 view) -> None:
+                 view):
         super().__init__(entity_id, position)
         self.view = view
 

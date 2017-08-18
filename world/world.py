@@ -4,7 +4,7 @@ class World(object):
     def __init__(self,
                  size=(800, 800),
                  view=None,
-                 render=False) -> None:
+                 render=False):
         self.view = view
         if view is not None:
             view.add_observer(self)
@@ -32,8 +32,8 @@ class World(object):
         raise NotImplementedError('get_reward() has not been implemented!')
 
     def transform_position_for_bounds(self, proposed_move):
-        transformed_x: float = proposed_move[0]
-        transformed_y: float = proposed_move[1]
+        transformed_x = proposed_move[0]
+        transformed_y = proposed_move[1]
 
         # constrain X coordinate
         transformed_x = 0 if transformed_x < 0 else transformed_x

@@ -7,7 +7,6 @@ from hyperopt import hp
 from hyperopt import fmin, tpe, STATUS_OK
 
 from world import SmellWorld
-from world.view import WorldView
 from entity.animond import SmellAnimond, AnimondView
 from entity.home import Home, HomeView
 from entity.food import Food, FoodView
