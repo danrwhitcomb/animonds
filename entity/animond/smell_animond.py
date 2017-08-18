@@ -11,7 +11,7 @@ class SmellAnimond(Animond):
     def __init__(self,
                  entity_id,
                  predictor,
-                 view,
+                 view=None,
                  position=(0, 0),
                  angle=0,
                  has_food=False):
