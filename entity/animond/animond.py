@@ -15,7 +15,7 @@ class Animond(Entity):
     def __init__(self,
                  entity_id,
                  predictor,
-                 view,
+                 view=None,
                  position=(0, 0),
                  angle=0,
                  has_food=False):
@@ -37,7 +37,8 @@ class Animond(Entity):
         self.predictor.reset(self.state)
 
     def render(self):
-        self.view.render(self.position, self.angle, self.has_food)
+        if self.view is not None:
+            self.view.render(self.position, self.angle, self.has_food)
 
     @property
     def state(self):

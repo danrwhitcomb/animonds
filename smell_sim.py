@@ -7,9 +7,9 @@ from hyperopt import hp
 from hyperopt import fmin, tpe, STATUS_OK
 
 from world import SmellWorld
-from entity.animond import SmellAnimond, AnimondView
-from entity.home import Home, HomeView
-from entity.food import Food, FoodView
+from entity.animond import SmellAnimond
+from entity.home import Home
+from entity.food import Food
 from predictor import QPredictor
 
 # Window information
@@ -72,11 +72,10 @@ def run(episodes,
     predictor = QPredictor(epoch_size=epochs, replay_size=replay_size,
                            random_percent=random_percent, learning_rate=learning_rate,
                            discount=discount, momentum=momentum, dropout=dropout)
-    animond = SmellAnimond('smell_animond', predictor, AnimondView(),
-                           position=(500, 400))
+    animond = SmellAnimond('smell_animond', predictor, position=(500, 400))
 
-    home = Home('home', position=(200, 700), view=HomeView())
-    food = Food('food', position=(700, 100), view=FoodView())
+    home = Home('home', position=(200, 700))
+    food = Food('food', position=(700, 100))
 
     size = (WIDTH, HEIGHT)
     world = SmellWorld([animond], [home], [food], size=size)
