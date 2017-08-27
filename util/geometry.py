@@ -1,42 +1,25 @@
 from math import sin, cos, sqrt, atan, pi
+from sympy.geometry import point
+
+
+def get_iso_triangle_for_center(center, length, direction, tip_angle):
+    tip = get_point_in_direction(center, direction, length / 2.0)
+    point1 = get_point_in_direction(tip, direction + tip_angle, -length)
+    point2 = get_point_in_direction(tip, direction - tip_angle, -length)
+
+    return point.Point2D(tip), point.Point2D(point1), point.Point2D(point2)
 
 
 def get_point_in_direction(start, angle, dist):
-    return (dist * sin(angle) + start[0],
-            dist * cos(angle) + start[1])
-
-
-def rotate_point(angle, point, pivot=(0, 0)):
-    s = sin(angle)
-    c = cos(angle)
-
-    # Convert to origin reference frame
-    point_o = (point[0] - pivot[0], point[1] - pivot[1])
-
-    # Rotate
-    new_p = (point_o[0] * c - point_o[1] * s,
-             point_o[0] * s + point_o[1] * c)
-
-    return (new_p[0] + pivot[0], new_p[1] + pivot[1])
+    return point.Point2D((dist * sin(angle) + start[0], dist * cos(angle) + start[1]))
 
 
 def distance(a, b):
-    return sqrt(((a[0] - b[0]) ** 2) + ((a[1] - b[1]) ** 2))
-
-
-def angle_difference(angle, point_a, point_b):
-    y_delta = float(point_b[1] - point_a[1])
-    x_delta = float(point_b[0] - point_a[0])
-    sigma = atan(x_delta / y_delta)
-
-    theta1 = angle - sigma
-    theta2 = (2 * pi) - theta1
-
-    return (theta1, theta2)
+    return float(a.distance(b))
 
 
 def normalize_position(position, max_vals):
-    return (float(position[0]) / max_vals[0], float(position[1] / max_vals[1]))
+    return (float(position.x) / max_vals[0], float(position.y / max_vals[1]))
 
 
 def normalize_angle(angle):

@@ -1,19 +1,15 @@
 
 
-class Entity(object):
+class Entity:
 
     def __init__(self,
                  entity_id,
-                 position):
+                 color):
         self.id = entity_id
+        self.color = color
+
         self.lock = False
-
         self.world = None
-        self.position = position
-        self.start_position = position
-
-    def reset(self):
-        self.position = self.start_position
 
     def tick(self, train=False):
         pass
@@ -22,5 +18,15 @@ class Entity(object):
         pass
 
     @property
+    def position(self):
+        pass
+
+    @property
     def state(self):
+        pass
+
+    def collision(self, source, angle):
+        return None, None
+
+    def reset(self):
         pass

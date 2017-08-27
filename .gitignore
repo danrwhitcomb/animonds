@@ -1,3 +1,4 @@
 *.pyc
 summary/*
 .mypy_cache/*
+env/*

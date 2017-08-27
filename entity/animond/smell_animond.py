@@ -8,15 +8,6 @@ import error
 
 class SmellAnimond(Animond):
 
-    def __init__(self,
-                 entity_id,
-                 predictor,
-                 view=None,
-                 position=(0, 0),
-                 angle=0,
-                 has_food=False):
-        super().__init__(entity_id, predictor, view, position, angle, has_food)
-
     @property
     def state(self):
         world_size = self.world.size

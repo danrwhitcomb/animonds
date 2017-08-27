@@ -40,6 +40,13 @@ def deep_q_estimator(X, y, move_mask, output_count, lr, epsilon=RELU_E, dropout=
 
     return output, train, summaries
 
+# def deep_convolutional_q_estimator(X, y, move_mask, output_count, lr,
+#                                    kernel_size,
+#                                    stride_size,
+#                                    epsilon=RELU_E,
+#                                    dropout=DROPOUT,
+#                                    momentum=MOMENTUM):
+
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""

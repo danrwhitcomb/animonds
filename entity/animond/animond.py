@@ -1,4 +1,5 @@
 from math import pi
+from sympy.geometry import polygon
 
 from entity import Entity
 from world import AnimondWorld
@@ -15,11 +16,13 @@ class Animond(Entity):
     def __init__(self,
                  entity_id,
                  predictor,
+                 size,
+                 color=(0, 0, 0),
                  view=None,
                  position=(0, 0),
                  angle=0,
                  has_food=False):
-        super().__init__(entity_id, position)
+        super().__init__(entity_id, color)
 
         self.predictor = predictor
         self.angle = angle
@@ -28,7 +31,15 @@ class Animond(Entity):
 
         # Persist starting vals for reset
         self.start_angle = angle
+        self.start_position = position
         self.start_has_food = self.has_food
+        self.size = size
+
+        self.create_shape(position, size, angle)
+
+    def create_shape(self, position, size, angle):
+        self.shape = polygon.Triangle(*geometry.get_iso_triangle_for_center(
+                position, size, angle, 0.2))
 
     def reset(self):
         super().reset()
@@ -36,9 +47,16 @@ class Animond(Entity):
         self.has_food = self.start_has_food
         self.predictor.reset(self.state)
 
+        self.create_shape(self.start_position, self.size, self.angle)
+
+
     def render(self):
         if self.view is not None:
-            self.view.render(self.position, self.angle, self.has_food)
+            self.view.render(self.shape, self.has_food)
+
+    @property
+    def position(self):
+        return self.shape.circumcenter
 
     @property
     def state(self):
@@ -48,8 +66,11 @@ class Animond(Entity):
     def state(self, value):
         pass
 
+    def collision(self, source, angle):
+        return self.shape.intersection(line.Ray(source, angle))
+
     def run(self, steps, train=False):
-        return sum([self.tick(train) for _ in range(steps)]) / steps
+        return (sum([self.tick(train) for _ in range(steps)]) / steps)
 
     def tick(self, train=False):
         had_food = self.has_food
@@ -88,12 +109,15 @@ class Animond(Entity):
         self.lock = True
 
         if move == FORWARD:
-            self.position = self.world.transform_position_for_bounds(
-                    geometry.get_point_in_direction(self.position, self.angle, MOVE_DIST))
+            translation = geometry.get_point_in_direction(self.position, self.angle, MOVE_DIST) - self.position
+            self.shape = self.shape.translate(*translation)
+            self.shape = self.world.transform_shape_for_bounds(self.shape)
         elif move == LEFT_ROTATE:
-            self.angle = (self.angle + ROTATE_DIST) % (2 * pi)
+            self.angle -= ROTATE_DIST
+            self.shape = self.shape.rotate(ROTATE_DIST, self.position)
         elif move == RIGHT_ROTATE:
-            self.angle = (self.angle - ROTATE_DIST) % (2 * pi)
+            self.angle += ROTATE_DIST
+            self.shape = self.shape.rotate(-ROTATE_DIST, self.position)
         else:
             print("Move not found")
 

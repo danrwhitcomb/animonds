@@ -5,11 +5,13 @@ updates the entities in the environment, and renders the entities within the env
 import sys
 from hyperopt import hp
 from hyperopt import fmin, tpe, STATUS_OK
+from sympy.geometry import point
 
 from world import SmellWorld
-from entity.animond import SmellAnimond
-from entity.home import Home
-from entity.food import Food
+from world.view import WorldView
+from entity.animond import SmellAnimond, AnimondView
+from entity.home import Home, HomeView
+from entity.food import Food, FoodView
 from predictor import QPredictor
 
 # Window information
@@ -20,6 +22,7 @@ DELAY = 0
 NAME = 'Animonds'
 
 GOAL_THRESHOLD = 20
+RENDER = False
 
 # Search space
 EPISODES = 'episodes'
@@ -35,7 +38,7 @@ DROPOUT = 'dropout'
 def create_search_space():
     return {
         EPISODES: hp.quniform(EPISODES, 1000, 10000, 1),
-        STEPS: hp.quniform(STEPS, 500, 2000, 1),
+        STEPS: hp.quniform(STEPS, 500, 1000, 1),
         REPLAY_SIZE: hp.quniform(REPLAY_SIZE, 2, 30, 1),
         RANDOM_PERCENT: hp.uniform(RANDOM_PERCENT, 0.01, 0.5),
         LEARNING_RATE: hp.uniform(LEARNING_RATE, 0.00000001, 0.0001),
@@ -72,16 +75,20 @@ def run(episodes,
     predictor = QPredictor(epoch_size=epochs, replay_size=replay_size,
                            random_percent=random_percent, learning_rate=learning_rate,
                            discount=discount, momentum=momentum, dropout=dropout)
-    animond = SmellAnimond('smell_animond', predictor, position=(500, 400))
+    animond = SmellAnimond('smell_animond', predictor, size=40, position=(400, 400))
+    home = Home('home', position=point.Point2D(200, 700), color=(0, 0.1, 0.9), size=20)
+    food = Food('food', position=point.Point2D(700, 100), color=(0, 1, 0), size=10)
 
-    home = Home('home', position=(200, 700))
-    food = Food('food', position=(700, 100))
-
-    size = (WIDTH, HEIGHT)
-    world = SmellWorld([animond], [home], [food], size=size)
+    world_view = WorldView() if RENDER else None
+    world = SmellWorld([animond], [home], [food], size=(WIDTH, HEIGHT), view=world_view, render=RENDER)
 
     animond.world = world
     animond.predictor.initialize(animond.state)
+
+    if RENDER:
+        animond.view = AnimondView()
+        home.view = HomeView()
+        food.view = FoodView()
 
     for i in range(episodes):
         sys.stdout.write('\rEpisode {}: {}'.format(i, world.run(epochs, train=True)))

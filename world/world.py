@@ -1,5 +1,5 @@
 
-class World(object):
+class World:
 
     def __init__(self,
                  size=(800, 800),
@@ -31,19 +31,20 @@ class World(object):
     def get_reward(self, entity):
         raise NotImplementedError('get_reward() has not been implemented!')
 
-    def transform_position_for_bounds(self, proposed_move):
-        transformed_x = proposed_move[0]
-        transformed_y = proposed_move[1]
+    def transform_shape_for_bounds(self, shape):
+        new_shape = shape
+        for vertex in shape.vertices:
+            if vertex.x > self.size[0]:
+                new_shape = new_shape.translate(self.size[0] - vertex.x, 0)
+            elif vertex.x < 0:
+                new_shape = new_shape.translate(0 - vertex.x, 0)
 
-        # constrain X coordinate
-        transformed_x = 0 if transformed_x < 0 else transformed_x
-        transformed_x = self.size[0] if transformed_x > self.size[0] else transformed_x
+            if vertex.y > self.size[1]:
+                new_shape = new_shape.translate(0, self.size[1] - vertex.y)
+            elif vertex.y < 0:
+                new_shape = new_shape.translate(0, 0 - vertex.y)
 
-        # constrain y coordinate
-        transformed_y = 0 if transformed_y < 0 else transformed_y
-        transformed_y = self.size[1] if transformed_y > self.size[1] else transformed_y
-
-        return (transformed_x, transformed_y)
+        return new_shape
 
     def close(self):
         print('Closing world...')
